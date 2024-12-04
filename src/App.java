@@ -3,8 +3,6 @@ import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.sql.*;
-import java.util.ArrayList;
-import java.util.List;
 
 public class App {
     private JFrame mainFrame;
@@ -42,7 +40,7 @@ public class App {
             @Override
             public void actionPerformed(ActionEvent e) {
                 try {
-                    showData();
+                    new DataManage.Read().showData();
                     helloLabel.setVisible(false);
                     mainFrame.revalidate();
                     mainFrame.repaint();
@@ -55,39 +53,6 @@ public class App {
         mainFrame.add(controlPanel, BorderLayout.NORTH);
 
         mainFrame.setVisible(true);
-    }
-
-    private void showData() throws SQLException {
-        List<Object[]> data = getData();
-        String[] columnNames = {"ID", "Name"};
-
-        if (data.isEmpty()) {
-            JOptionPane.showMessageDialog(mainFrame, "Таблица пуста!", "Инфо", JOptionPane.INFORMATION_MESSAGE);
-            return;
-        }
-
-        Object[][] dataArray = data.toArray(new Object[0][0]);
-        JTable table = new JTable(dataArray, columnNames);
-        JScrollPane scrollPane = new JScrollPane(table);
-
-        panel.add(scrollPane, BorderLayout.CENTER);
-        panel.revalidate();
-        panel.repaint();
-    }
-
-    private List<Object[]> getData() throws SQLException {
-        List<Object[]> rows = new ArrayList<>();
-
-        try (Connection connection = DB.getConnection();
-             Statement statement = connection.createStatement();
-             ResultSet resultSet = statement.executeQuery("SELECT * FROM client")) {
-
-            while (resultSet.next()) {
-                Object[] row = {resultSet.getInt("ID"), resultSet.getString("Name")};
-                rows.add(row);
-            }
-        }
-        return rows;
     }
 
     public static void main(String[] args) {
