@@ -1,13 +1,16 @@
 import javax.swing.*;
+import javax.swing.table.DefaultTableModel;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.util.*;
 
 public class App {
     private JFrame mainFrame;
     private JLabel helloLabel;
     private JButton addDataButton;
     private JButton getDataButton;
+    private JButton deleteDataButton;
     private JPanel panel;
     private JPanel controlPanel;
 
@@ -28,13 +31,14 @@ public class App {
         controlPanel.setLayout(new BoxLayout(controlPanel, BoxLayout.Y_AXIS));
         controlPanel.setAlignmentX(Component.CENTER_ALIGNMENT);
 
-
         helloLabel = new JLabel("Выберите действие:");
         controlPanel.add(helloLabel);
         controlPanel.add(Box.createVerticalStrut(10));
 
         addDataButton = new JButton("Добавить данные");
+        addDataButton.setAlignmentX(Component.CENTER_ALIGNMENT);
         addDataButton.addActionListener(new ActionListener() {
+            @Override
             public void actionPerformed(ActionEvent e) {
                 new DataManage.Create();
                 mainFrame.dispose();
@@ -55,8 +59,19 @@ public class App {
             }
         });
         controlPanel.add(getDataButton);
-        mainFrame.add(controlPanel, BorderLayout.NORTH);
 
+        deleteDataButton = new JButton("Удалить данные");
+        deleteDataButton.setAlignmentX(Component.CENTER_ALIGNMENT);
+        deleteDataButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                new DataManage.Delete().showData();
+                mainFrame.dispose();
+           }
+        });
+        controlPanel.add(deleteDataButton);
+
+        mainFrame.add(controlPanel, BorderLayout.NORTH);
         mainFrame.setVisible(true);
     }
 
