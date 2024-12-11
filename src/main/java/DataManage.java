@@ -249,6 +249,8 @@ class DataManage {
 
             tableModel = new DefaultTableModel(columnNames, 0);
             table = new JTable(tableModel);
+            JScrollPane scrollPane = new JScrollPane(table);
+            panel.add(scrollPane, BorderLayout.CENTER);
 
             submitButton = new JButton("Удалить данные");
             submitButton.addActionListener(new ActionListener() {
@@ -269,6 +271,8 @@ class DataManage {
             });
             panel.add(cancelButton, BorderLayout.EAST);
 
+            showData();
+
             frame.setVisible(true);
         }
 
@@ -288,38 +292,40 @@ class DataManage {
             try (Connection connection = DB.getConnection()) {
                 String sql = "DELETE FROM client WHERE ID = ?";
 
-                try {
-                    assert connection != null;
-                    try (PreparedStatement statement = connection.prepareStatement(sql)) {
-                        connection.setAutoCommit(false);
+                try (PreparedStatement statement = connection.prepareStatement(sql)) {
+                    connection.setAutoCommit(false);
 
-                        for (int row : selectedRows) {
-                            Object value = tableModel.getValueAt(row, 0);
-                            String idString = (value == null) ? "" : value.toString().trim();
+                    for (int row : selectedRows) {
+                        Object value = tableModel.getValueAt(row, 0);
+                        String idString = (value == null) ? "" : value.toString().trim();
 
-                            if (idString.isEmpty()) {
-                                JOptionPane.showMessageDialog(frame, "Не выбран ID!", "Ошибка", JOptionPane.ERROR_MESSAGE);
-                                return;
-                            }
-
-                            int id = Integer.parseInt(idString);
-                            statement.setInt(1, id);
-                            statement.addBatch();
+                        if (idString.isEmpty()) {
+                            JOptionPane.showMessageDialog(frame, "Не выбран ID!", "Ошибка", JOptionPane.ERROR_MESSAGE);
+                            return;
                         }
 
-                        statement.executeBatch();
-                        connection.commit();
-
-                        for (int i = selectedRows.length - 1; i >= 0; i--) {
-                            tableModel.removeRow(selectedRows[i]);
-                        }
-
-                        JOptionPane.showMessageDialog(frame, "Данные успешно удалены!", "Инфо", JOptionPane.INFORMATION_MESSAGE);
+                        int id = Integer.parseInt(idString);
+                        statement.setInt(1, id);
+                        statement.addBatch();
                     }
+
+                    statement.executeBatch();
+                    connection.commit();
+
+                    for (int i = selectedRows.length - 1; i >= 0; i--) {
+                        tableModel.removeRow(selectedRows[i]);
+                    }
+
+                    JOptionPane.showMessageDialog(frame, "Данные успешно удалены!", "Инфо", JOptionPane.INFORMATION_MESSAGE);
                 }
                 catch (SQLException | NumberFormatException e) {
-                    connection.rollback();
-                    JOptionPane.showMessageDialog(frame, "Ошибка удаления: " + e.getMessage(), "Ошибка", JOptionPane.ERROR_MESSAGE);
+                    try {
+                        connection.rollback();
+                    }
+                    catch (SQLException rollbackException) {
+                        JOptionPane.showMessageDialog(frame, "Ошибка отката транзакции: " + rollbackException.getMessage(), "Критическая ошибка", JOptionPane.ERROR_MESSAGE);
+                    }
+                    JOptionPane.showMessageDialog(frame, "Ошибка удаления данных: " + e.getMessage(), "Ошибка", JOptionPane.ERROR_MESSAGE);
                 }
             }
             catch (SQLException e) {
@@ -336,11 +342,12 @@ class DataManage {
                 return;
             }
 
-            Object[][] dataArray = data.toArray(new Object[0][0]);
-            table = new JTable(dataArray, columnNames);
-            JScrollPane scrollPane = new JScrollPane(table);
+            tableModel.setRowCount(0);
 
-            panel.add(scrollPane, BorderLayout.CENTER);
+            for (Object[] row : data) {
+                tableModel.addRow(row);
+            }
+
             panel.revalidate();
             panel.repaint();
         }
@@ -360,7 +367,7 @@ class DataManage {
                 }
             }
             catch (SQLException e) {
-                System.err.println("Ошибка: " + e.getMessage());
+                JOptionPane.showMessageDialog(frame, "Ошибка получения данных: " + e.getMessage(), "Ошибка", JOptionPane.ERROR_MESSAGE);
             }
             return rows;
         }
