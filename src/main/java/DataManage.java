@@ -17,7 +17,7 @@ class DataManage {
         private JButton addRowButton;
         private JTable table;
         private DefaultTableModel tableModel;
-        private Vector<String> columnNames = new Vector<>();
+        private Vector<String> columnNames = new Vector<>(List.of("Name"));
 
         public Create() {
             GUI();
@@ -32,7 +32,6 @@ class DataManage {
             panel = new JPanel(new BorderLayout());
             frame.add(panel, BorderLayout.CENTER);
 
-            columnNames.add("Name");
             tableModel = new DefaultTableModel(columnNames, 0);
             table = new JTable(tableModel);
             JScrollPane scrollPane = new JScrollPane(table);
@@ -43,6 +42,7 @@ class DataManage {
                 @Override
                 public void actionPerformed(ActionEvent e) {
                     tableModel.addRow(new Object[]{});
+                    tableModel.fireTableDataChanged();
                 }
             });
             panel.add(addRowButton, BorderLayout.NORTH);
@@ -92,7 +92,8 @@ class DataManage {
                                 String strValue = (value == null) ? "" : value.toString().trim();
 
                                 if (strValue.isEmpty()) {
-                                    JOptionPane.showMessageDialog(frame, "Добавление пустой строки!", "Ошибка", JOptionPane.ERROR_MESSAGE);
+                                    JOptionPane.showMessageDialog(frame, "Обнаружена пустая строка!\n" +
+                                            "Убедитесь, что Вы нажали Enter после ввода данных в ячейку!", "Предупреждение", JOptionPane.WARNING_MESSAGE);
                                     connection.rollback();
                                     return;
                                 }
@@ -103,16 +104,21 @@ class DataManage {
 
                         statement.executeBatch();
                         connection.commit();
-                        JOptionPane.showMessageDialog(frame, "Данные успешно отправлены!");
+                        JOptionPane.showMessageDialog(frame, "Данные успешно отправлены!", "Инфо", JOptionPane.INFORMATION_MESSAGE);
                     }
                 }
                 catch (SQLException e) {
-                    connection.rollback();
-                    JOptionPane.showMessageDialog(frame, "Ошибка отправки: " + e.getMessage(), "Ошибка", JOptionPane.ERROR_MESSAGE);
+                    try {
+                        connection.rollback();
+                    }
+                    catch (SQLException rollbackException) {
+                        JOptionPane.showMessageDialog(frame, "Ошибка отката транзакции: " + rollbackException.getMessage(), "Критическая ошибка", JOptionPane.ERROR_MESSAGE);
+                    }
+                    JOptionPane.showMessageDialog(frame, "Ошибка отправки данных: " + e.getMessage(), "Ошибка", JOptionPane.ERROR_MESSAGE);
                 }
             }
             catch (SQLException e) {
-                JOptionPane.showMessageDialog(frame, "Ошибка соединения: " + e.getMessage(), "Ошибка", JOptionPane.ERROR_MESSAGE);
+                JOptionPane.showMessageDialog(frame, "Ошибка создания соединения: " + e.getMessage(), "Ошибка", JOptionPane.ERROR_MESSAGE);
             }
         }
 
@@ -140,7 +146,6 @@ class DataManage {
     static class Read {
         private JFrame frame;
         private JPanel panel;
-        private JLabel successLabel;
         private JButton refreshButton;
         private JButton cancelButton;
         private DefaultTableModel tableModel;
@@ -165,13 +170,9 @@ class DataManage {
                     showData();
                     frame.revalidate();
                     frame.repaint();
-                    successLabel.setText("Данные успешно получены!");
                 }
             });
             panel.add(refreshButton, BorderLayout.SOUTH);
-
-            successLabel = new JLabel();
-            panel.add(successLabel, BorderLayout.WEST);
 
             cancelButton = new JButton("Отмена");
             cancelButton.addActionListener(new ActionListener() {
@@ -219,7 +220,7 @@ class DataManage {
                 }
             }
             catch (SQLException e) {
-                System.err.println("Ошибка: " + e.getMessage());
+                JOptionPane.showMessageDialog(frame, "Ошибка создания соединения: " + e.getMessage(), "Ошибка", JOptionPane.ERROR_MESSAGE);
             }
             return rows;
         }
@@ -280,43 +281,46 @@ class DataManage {
             int[] selectedRows = table.getSelectedRows();
 
             if (selectedRows.length == 0) {
-                JOptionPane.showMessageDialog(frame, "Выберите строки!", "Ошибка", JOptionPane.ERROR_MESSAGE);
+                JOptionPane.showMessageDialog(frame, "Выберите строки!", "Предупреждение", JOptionPane.WARNING_MESSAGE);
                 return;
             }
 
             if (tableModel.getRowCount() == 0) {
-                JOptionPane.showMessageDialog(frame, "Таблица пуста!", "Ошибка", JOptionPane.ERROR_MESSAGE);
+                JOptionPane.showMessageDialog(frame, "Таблица пуста!", "Инфо", JOptionPane.INFORMATION_MESSAGE);
                 return;
             }
 
             try (Connection connection = DB.getConnection()) {
                 String sql = "DELETE FROM client WHERE ID = ?";
 
-                try (PreparedStatement statement = connection.prepareStatement(sql)) {
-                    connection.setAutoCommit(false);
+                try {
+                    assert connection != null;
+                    try (PreparedStatement statement = connection.prepareStatement(sql)) {
+                        connection.setAutoCommit(false);
 
-                    for (int row : selectedRows) {
-                        Object value = tableModel.getValueAt(row, 0);
-                        String idString = (value == null) ? "" : value.toString().trim();
+                        for (int row : selectedRows) {
+                            Object value = tableModel.getValueAt(row, 0);
+                            String idString = (value == null) ? "" : value.toString().trim();
 
-                        if (idString.isEmpty()) {
-                            JOptionPane.showMessageDialog(frame, "Не выбран ID!", "Ошибка", JOptionPane.ERROR_MESSAGE);
-                            return;
+                            if (idString.isEmpty()) {
+                                JOptionPane.showMessageDialog(frame, "Не выбран ID!", "Ошибка", JOptionPane.ERROR_MESSAGE);
+                                return;
+                            }
+
+                            int id = Integer.parseInt(idString);
+                            statement.setInt(1, id);
+                            statement.addBatch();
                         }
 
-                        int id = Integer.parseInt(idString);
-                        statement.setInt(1, id);
-                        statement.addBatch();
+                        statement.executeBatch();
+                        connection.commit();
+
+                        for (int i = selectedRows.length - 1; i >= 0; i--) {
+                            tableModel.removeRow(selectedRows[i]);
+                        }
+
+                        JOptionPane.showMessageDialog(frame, "Данные успешно удалены!", "Инфо", JOptionPane.INFORMATION_MESSAGE);
                     }
-
-                    statement.executeBatch();
-                    connection.commit();
-
-                    for (int i = selectedRows.length - 1; i >= 0; i--) {
-                        tableModel.removeRow(selectedRows[i]);
-                    }
-
-                    JOptionPane.showMessageDialog(frame, "Данные успешно удалены!", "Инфо", JOptionPane.INFORMATION_MESSAGE);
                 }
                 catch (SQLException | NumberFormatException e) {
                     try {
@@ -335,7 +339,6 @@ class DataManage {
 
         public void showData() {
             List<Object[]> data = getData();
-            String[] columnNames = {"ID", "Name"};
 
             if (data.isEmpty()) {
                 JOptionPane.showMessageDialog(frame, "Таблица пуста!", "Инфо", JOptionPane.INFORMATION_MESSAGE);
