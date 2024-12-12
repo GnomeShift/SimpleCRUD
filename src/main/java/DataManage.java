@@ -1,9 +1,6 @@
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
-import javax.swing.table.TableModel;
 import java.awt.*;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 import java.sql.*;
 import java.util.*;
 import java.util.List;
@@ -11,13 +8,8 @@ import java.util.List;
 class DataManage {
     static class Create {
         private JFrame frame;
-        private JPanel panel;
-        private JButton submitButton;
-        private JButton cancelButton;
-        private JButton addRowButton;
-        private JTable table;
         private DefaultTableModel tableModel;
-        private Vector<String> columnNames = new Vector<>(List.of("Name"));
+        private final Vector<String> columnNames = new Vector<>(List.of("Name"));
 
         public Create() {
             GUI();
@@ -29,40 +21,29 @@ class DataManage {
             frame.setSize(400, 300);
             frame.setLayout(new BorderLayout());
 
-            panel = new JPanel(new BorderLayout());
+            JPanel panel = new JPanel(new BorderLayout());
             frame.add(panel, BorderLayout.CENTER);
 
             tableModel = new DefaultTableModel(columnNames, 0);
-            table = new JTable(tableModel);
+            JTable table = new JTable(tableModel);
             JScrollPane scrollPane = new JScrollPane(table);
             panel.add(scrollPane, BorderLayout.CENTER);
 
-            addRowButton = new JButton("Добавить строку");
-            addRowButton.addActionListener(new ActionListener() {
-                @Override
-                public void actionPerformed(ActionEvent e) {
-                    tableModel.addRow(new Object[]{});
-                    tableModel.fireTableDataChanged();
-                }
+            JButton addRowButton = new JButton("Добавить строку");
+            addRowButton.addActionListener(e -> {
+                tableModel.addRow(new Object[]{});
+                tableModel.fireTableDataChanged();
             });
             panel.add(addRowButton, BorderLayout.NORTH);
 
-            submitButton = new JButton("Отправить данные");
-            submitButton.addActionListener(new ActionListener() {
-                @Override
-                public void actionPerformed(ActionEvent e) {
-                    addData();
-                }
-            });
+            JButton submitButton = new JButton("Отправить данные");
+            submitButton.addActionListener(e -> addData());
             panel.add(submitButton, BorderLayout.SOUTH);
 
-            cancelButton = new JButton("Отмена");
-            cancelButton.addActionListener(new ActionListener() {
-                @Override
-                public void actionPerformed(ActionEvent e) {
-                    frame.dispose();
-                    new App();
-                }
+            JButton cancelButton = new JButton("Отмена");
+            cancelButton.addActionListener(e -> {
+                frame.dispose();
+                new App();
             });
             panel.add(cancelButton, BorderLayout.EAST);
 
@@ -146,9 +127,6 @@ class DataManage {
     static class Read {
         private JFrame frame;
         private JPanel panel;
-        private JButton refreshButton;
-        private JButton cancelButton;
-        private DefaultTableModel tableModel;
 
         public Read() {
             GUI();
@@ -163,24 +141,18 @@ class DataManage {
             panel = new JPanel(new BorderLayout());
             frame.add(panel, BorderLayout.CENTER);
 
-            refreshButton = new JButton("Обновить");
-            refreshButton.addActionListener(new ActionListener() {
-                @Override
-                public void actionPerformed(ActionEvent e) {
-                    showData();
-                    frame.revalidate();
-                    frame.repaint();
-                }
+            JButton refreshButton = new JButton("Обновить");
+            refreshButton.addActionListener(e -> {
+                showData();
+                frame.revalidate();
+                frame.repaint();
             });
             panel.add(refreshButton, BorderLayout.SOUTH);
 
-            cancelButton = new JButton("Отмена");
-            cancelButton.addActionListener(new ActionListener() {
-                @Override
-                public void actionPerformed(ActionEvent e) {
-                    frame.dispose();
-                    new App();
-                }
+            JButton cancelButton = new JButton("Отмена");
+            cancelButton.addActionListener(e -> {
+                frame.dispose();
+                new App();
             });
             panel.add(cancelButton, BorderLayout.EAST);
 
@@ -229,11 +201,9 @@ class DataManage {
     static class Delete {
         private JFrame frame;
         private JPanel panel;
-        private JButton submitButton;
-        private JButton cancelButton;
         private JTable table;
         private DefaultTableModel tableModel;
-        private Vector<String> columnNames = new Vector<>(Arrays.asList("ID", "Name"));
+        private final Vector<String> columnNames = new Vector<>(Arrays.asList("ID", "Name"));
 
         public Delete() {
             GUI();
@@ -253,22 +223,14 @@ class DataManage {
             JScrollPane scrollPane = new JScrollPane(table);
             panel.add(scrollPane, BorderLayout.CENTER);
 
-            submitButton = new JButton("Удалить данные");
-            submitButton.addActionListener(new ActionListener() {
-                @Override
-                public void actionPerformed(ActionEvent e) {
-                    deleteData();
-                }
-            });
+            JButton submitButton = new JButton("Удалить данные");
+            submitButton.addActionListener(e -> deleteData());
             panel.add(submitButton, BorderLayout.SOUTH);
 
-            cancelButton = new JButton("Отмена");
-            cancelButton.addActionListener(new ActionListener() {
-                @Override
-                public void actionPerformed(ActionEvent e) {
-                    frame.dispose();
-                    new App();
-                }
+            JButton cancelButton = new JButton("Отмена");
+            cancelButton.addActionListener(e -> {
+                frame.dispose();
+                new App();
             });
             panel.add(cancelButton, BorderLayout.EAST);
 
