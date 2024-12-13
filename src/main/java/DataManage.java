@@ -1,4 +1,5 @@
 import javax.swing.*;
+import javax.swing.event.TableModelEvent;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
 import java.sql.*;
@@ -126,7 +127,9 @@ class DataManage {
 
     static class Read {
         private JFrame frame;
-        private JPanel panel;
+        private DefaultTableModel tableModel;
+        private final Map<Integer, Map<Integer, Object>> changedCells = new HashMap<>();
+        private final Vector<String> columnNames = new Vector<>(Arrays.asList("ID", "Name"));
 
         public Read() {
             GUI();
@@ -138,15 +141,35 @@ class DataManage {
             frame.setSize(400, 300);
             frame.setLayout(new BorderLayout());
 
-            panel = new JPanel(new BorderLayout());
+            JPanel panel = new JPanel(new BorderLayout());
             frame.add(panel, BorderLayout.CENTER);
 
-            JButton refreshButton = new JButton("Обновить");
-            refreshButton.addActionListener(e -> {
-                showData();
-                frame.revalidate();
-                frame.repaint();
+            tableModel = new DefaultTableModel(columnNames, 0);
+            tableModel.addTableModelListener(listener -> {
+                if (listener.getType() == TableModelEvent.UPDATE) {
+                    int row = listener.getFirstRow();
+                    int column = listener.getColumn();
+                    Object newValue = tableModel.getValueAt(row, column);
+
+                    changedCells.computeIfAbsent(row, k -> new HashMap<>()).put(column, newValue);
+                }
             });
+            JTable table = new JTable(tableModel);
+            JScrollPane scrollPane = new JScrollPane(table);
+            panel.add(scrollPane, BorderLayout.CENTER);
+
+            JButton editButton = new JButton("Редактировать данные");
+            editButton.addActionListener(e -> {
+                Object[] options = {"Да", "Нет"};
+                int confirm = JOptionPane.showOptionDialog(frame, "Отредактировать измененные данные?", "Подтверждение", JOptionPane.DEFAULT_OPTION, JOptionPane.QUESTION_MESSAGE, null, options, options[1]);
+                if (confirm == JOptionPane.YES_OPTION) {
+                    updateData();
+                }
+            });
+            panel.add(editButton, BorderLayout.WEST);
+
+            JButton refreshButton = new JButton("Обновить");
+            refreshButton.addActionListener(e -> showData());
             panel.add(refreshButton, BorderLayout.SOUTH);
 
             JButton cancelButton = new JButton("Отмена");
@@ -161,20 +184,16 @@ class DataManage {
 
         public void showData() {
             List<Object[]> data = getData();
-            String[] columnNames = {"ID", "Name"};
 
             if (data.isEmpty()) {
                 JOptionPane.showMessageDialog(frame, "Таблица пуста!", "Инфо", JOptionPane.INFORMATION_MESSAGE);
                 return;
             }
+            tableModel.setRowCount(0);
 
-            Object[][] dataArray = data.toArray(new Object[0][0]);
-            JTable table = new JTable(dataArray, columnNames);
-            JScrollPane scrollPane = new JScrollPane(table);
-
-            panel.add(scrollPane, BorderLayout.CENTER);
-            panel.revalidate();
-            panel.repaint();
+            for (Object[] row : data) {
+                tableModel.addRow(row);
+            }
         }
 
         public List<Object[]> getData() {
@@ -195,6 +214,74 @@ class DataManage {
                 JOptionPane.showMessageDialog(frame, "Ошибка создания соединения: " + e.getMessage(), "Ошибка", JOptionPane.ERROR_MESSAGE);
             }
             return rows;
+        }
+
+        public void updateData() {
+            if (changedCells.isEmpty()) {
+                JOptionPane.showMessageDialog(frame, "Изменений в таблице нет!", "Инфо", JOptionPane.INFORMATION_MESSAGE);
+                return;
+            }
+
+            try (Connection connection = DB.getConnection()) {
+                assert connection != null;
+                connection.setAutoCommit(false);
+
+                for (Map.Entry<Integer, Map<Integer, Object>> entry : changedCells.entrySet()) {
+                    int row = entry.getKey();
+                    Map<Integer, Object> rowChanges = entry.getValue();
+                    StringBuilder sql = buildSql();
+
+                    try (PreparedStatement statement = connection.prepareStatement(sql.toString())) {
+                        int paramIndex = 1;
+                        for (int i = 1; i < columnNames.size(); i++) {
+                            if (rowChanges.containsKey(i)) {
+                                Object value = rowChanges.get(i);
+                                if (value == null) {
+                                    statement.setNull(paramIndex++, Types.VARCHAR);
+                                }
+                                else {
+                                    statement.setString(paramIndex++, value.toString());
+                                }
+                            }
+                        }
+                        statement.setInt(paramIndex, Integer.parseInt(tableModel.getValueAt(row, 0).toString()));
+                        statement.executeUpdate();
+                    }
+                    catch (SQLException | NumberFormatException e) {
+                        try {
+                            connection.rollback();
+                        }
+                        catch (SQLException rollbackException) {
+                            JOptionPane.showMessageDialog(frame, "Ошибка отката транзакции: " + rollbackException.getMessage(), "Критическая ошибка", JOptionPane.ERROR_MESSAGE);
+                        }
+                        JOptionPane.showMessageDialog(frame, "Ошибка обновления данных: " + e.getMessage(), "Ошибка", JOptionPane.ERROR_MESSAGE);
+                    }
+                }
+
+                connection.commit();
+                JOptionPane.showMessageDialog(frame, "Данные успешно обновлены!", "Инфо", JOptionPane.INFORMATION_MESSAGE);
+                changedCells.clear();
+            }
+            catch (SQLException e) {
+                JOptionPane.showMessageDialog(frame, "Ошибка создания соединения", "Ошибка", JOptionPane.ERROR_MESSAGE);
+            }
+        }
+
+        private StringBuilder buildSql() {
+            StringBuilder sql = new StringBuilder("UPDATE client SET ");
+            boolean firstUpdate = true;
+
+            for (int i = 0; i < columnNames.size(); i++) {
+                if (i > 0) {
+                    if (!firstUpdate) {
+                        sql.append(", ");
+                    }
+                    sql.append(columnNames.get(i)).append(" = ?");
+                    firstUpdate = false;
+                }
+            }
+            sql.append(" WHERE id = ?");
+            return sql;
         }
     }
 
@@ -224,7 +311,13 @@ class DataManage {
             panel.add(scrollPane, BorderLayout.CENTER);
 
             JButton submitButton = new JButton("Удалить данные");
-            submitButton.addActionListener(e -> deleteData());
+            submitButton.addActionListener(e -> {
+                Object[] options = {"Да", "Нет"};
+                int confirm = JOptionPane.showOptionDialog(frame, "Удалить выбранные строки?", "Подтверждение", JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE, null, options, options[1]);
+                if (confirm == JOptionPane.YES_OPTION) {
+                    deleteData();
+                }
+            });
             panel.add(submitButton, BorderLayout.SOUTH);
 
             JButton cancelButton = new JButton("Отмена");
