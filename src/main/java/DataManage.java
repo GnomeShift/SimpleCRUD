@@ -233,7 +233,6 @@ class DataManage {
 
     static class Delete {
         private JFrame frame;
-        private JPanel panel;
         private JTable table;
         private DefaultTableModel tableModel;
         private final Vector<String> columnNames = new Vector<>(Arrays.asList("ID", "Name"));
@@ -249,7 +248,7 @@ class DataManage {
             frame.setSize(400, 300);
             frame.setLayout(new BorderLayout());
 
-            panel = new JPanel(new BorderLayout());
+            JPanel panel = new JPanel(new BorderLayout());
             frame.add(panel, BorderLayout.CENTER);
 
             tableModel = new DefaultTableModel(columnNames, 0);

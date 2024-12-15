@@ -3,7 +3,6 @@ import java.awt.*;
 
 public class App {
     private JFrame mainFrame;
-    private JLabel helloLabel;
 
     public App() {
         createMain();
@@ -22,7 +21,7 @@ public class App {
         controlPanel.setLayout(new BoxLayout(controlPanel, BoxLayout.Y_AXIS));
         controlPanel.setAlignmentX(Component.CENTER_ALIGNMENT);
 
-        helloLabel = new JLabel("Выберите действие:");
+        JLabel helloLabel = new JLabel("Выберите действие:");
         controlPanel.add(helloLabel);
         controlPanel.add(Box.createVerticalStrut(10));
 
@@ -39,9 +38,6 @@ public class App {
         getDataButton.addActionListener(e -> {
             new DataManage.Read();
             mainFrame.dispose();
-            helloLabel.setVisible(false);
-            mainFrame.revalidate();
-            mainFrame.repaint();
         });
         controlPanel.add(getDataButton);
 
