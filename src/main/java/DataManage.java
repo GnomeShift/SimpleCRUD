@@ -77,7 +77,7 @@ class DataManage {
             }
 
             try (Connection connection = DB.getConnection()) {
-                StringBuilder sql = DB.getInsertSql(columnCount);
+                StringBuilder sql = DB.getInsertSql();
 
                 try {
                     assert connection != null;
@@ -125,7 +125,7 @@ class DataManage {
         private JFrame frame;
         private DefaultTableModel tableModel;
         private final Map<Integer, Map<Integer, Object>> changedCells = new HashMap<>();
-        public static final Vector<String> columnNames = new Vector<>(Arrays.asList("ID", "Name"));
+        public static final Vector<String> columnNames = new Vector<>(Arrays.asList("ID", "Name", "CreatedAt", "UpdatedAt"));
 
         public Read() {
             GUI();
@@ -197,20 +197,41 @@ class DataManage {
                     try (PreparedStatement statement = connection.prepareStatement(sql.toString())) {
                         int paramIndex = 1;
                         for (int i = 1; i < columnNames.size(); i++) {
+                            if (columnNames.get(i).equals("UpdatedAt")) {
+                                continue;
+                            }
+                            Object value;
                             if (rowChanges.containsKey(i)) {
-                                Object value = rowChanges.get(i);
-                                if (value == null) {
-                                    statement.setNull(paramIndex++, Types.VARCHAR);
-                                }
-                                else {
+                                value = rowChanges.get(i);
+                            }
+                            else {
+                                value = tableModel.getValueAt(row, i);
+                            }
+                            if (columnNames.get(i).equals("CreatedAt")) {
+                                if (value != null) {
                                     statement.setString(paramIndex++, value.toString());
                                 }
+                                else {
+                                    statement.setNull(paramIndex++, java.sql.Types.VARCHAR);
+                                }
+                            }
+                            else {
+                                statement.setObject(paramIndex++, value);
                             }
                         }
-                        statement.setInt(paramIndex, Integer.parseInt(tableModel.getValueAt(row, 0).toString()));
+                        try {
+                            int id = Integer.parseInt(tableModel.getValueAt(row, 0).toString());
+                            statement.setInt(paramIndex, id);
+                        }
+                        catch (NumberFormatException e) {
+                            JOptionPane.showMessageDialog(frame, "Неверный ID!", "Ошибка", JOptionPane.ERROR_MESSAGE);
+                            connection.rollback();
+                            return;
+                        }
+
                         statement.executeUpdate();
                     }
-                    catch (SQLException | NumberFormatException e) {
+                    catch (SQLException e) {
                         try {
                             connection.rollback();
                         }
@@ -226,7 +247,7 @@ class DataManage {
                 changedCells.clear();
             }
             catch (SQLException e) {
-                JOptionPane.showMessageDialog(frame, "Ошибка создания соединения", "Ошибка", JOptionPane.ERROR_MESSAGE);
+                JOptionPane.showMessageDialog(frame, "Ошибка создания соединения: " + e.getMessage(), "Ошибка", JOptionPane.ERROR_MESSAGE);
             }
         }
     }
@@ -235,7 +256,7 @@ class DataManage {
         private JFrame frame;
         private JTable table;
         private DefaultTableModel tableModel;
-        private final Vector<String> columnNames = new Vector<>(Arrays.asList("ID", "Name"));
+        private final Vector<String> columnNames = new Vector<>(Arrays.asList("ID", "Name", "CreatedAt", "UpdatedAt"));
 
         public Delete() {
             GUI();

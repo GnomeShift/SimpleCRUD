@@ -26,7 +26,7 @@ public class DB {
                  ResultSet set = statement.executeQuery("SELECT * FROM client")) {
 
                 while (set.next()) {
-                    Object[] row = {set.getInt("ID"), set.getString("Name")};
+                    Object[] row = {set.getInt("ID"), set.getString("Name"), set.getString("CreatedAt"), set.getString("UpdatedAt")};
                     rows.add(row);
                 }
             }
@@ -37,39 +37,47 @@ public class DB {
         return rows;
     }
 
-    public static StringBuilder getInsertSql(int columnCount) {
+    public static StringBuilder getInsertSql() {
+        List<String> columnNames = DataManage.Create.columnNames;
         StringBuilder sql = new StringBuilder("INSERT INTO client (");
-        for (int i = 0; i < columnCount; i++) {
-            sql.append(DataManage.Create.columnNames.get(i));
-            if (i < columnCount - 1) {
-                sql.append(", ");
-            }
-        }
-        sql.append(") VALUES (");
 
-        for (int i = 0; i < columnCount; i++) {
-            sql.append("?");
-            if (i < columnCount - 1) {
+        for (int i = 0; i < columnNames.size(); i++) {
+            sql.append(columnNames.get(i));
+            if (i < columnNames.size() - 1) {
                 sql.append(", ");
             }
         }
-        sql.append(")");
+        sql.append(", CreatedAt) VALUES (");
+
+        for (int i = 0; i < columnNames.size(); i++) {
+            sql.append("?");
+            if (i < columnNames.size() - 1) {
+                sql.append(", ");
+            }
+        }
+        sql.append(", datetime('now'))");
         return sql;
     }
 
     public static StringBuilder getUpdateSql() {
         Vector<String> columnNames = DataManage.Read.columnNames;
         StringBuilder sql = new StringBuilder("UPDATE client SET ");
+        int updateAtIndex = columnNames.indexOf("UpdatedAt");
         boolean firstUpdate = true;
 
         for (int i = 0; i < columnNames.size(); i++) {
-            if (i > 0) {
-                if (!firstUpdate) {
-                    sql.append(", ");
-                }
-                sql.append(columnNames.get(i)).append(" = ?");
-                firstUpdate = false;
+            if (!firstUpdate) {
+                sql.append(", ");
             }
+            sql.append(columnNames.get(i)).append(" = ");
+
+            if (i == updateAtIndex) {
+                sql.append("datetime('now')");
+            }
+            else {
+                sql.append("?");
+            }
+            firstUpdate = false;
         }
         sql.append(" WHERE id = ?");
         return sql;
