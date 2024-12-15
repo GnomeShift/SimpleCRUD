@@ -37,7 +37,7 @@ public class App {
         JButton getDataButton = new JButton("Получить данные");
         getDataButton.setAlignmentX(Component.CENTER_ALIGNMENT);
         getDataButton.addActionListener(e -> {
-            new DataManage.Read().showData();
+            new DataManage.Read();
             mainFrame.dispose();
             helloLabel.setVisible(false);
             mainFrame.revalidate();
@@ -48,7 +48,7 @@ public class App {
         JButton deleteDataButton = new JButton("Удалить данные");
         deleteDataButton.setAlignmentX(Component.CENTER_ALIGNMENT);
         deleteDataButton.addActionListener(e -> {
-            new DataManage.Delete().showData();
+            new DataManage.Delete();
             mainFrame.dispose();
        });
         controlPanel.add(deleteDataButton);

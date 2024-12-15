@@ -7,10 +7,26 @@ import java.util.*;
 import java.util.List;
 
 class DataManage {
+
+    public static void showData(JFrame frame, DefaultTableModel tableModel) {
+        List<Object[]> data = DB.getData();
+
+        if (data.isEmpty()) {
+            JOptionPane.showMessageDialog(frame, "Таблица пуста!", "Инфо", JOptionPane.INFORMATION_MESSAGE);
+            return;
+        }
+
+        tableModel.setRowCount(0);
+
+        for (Object[] row : data) {
+            tableModel.addRow(row);
+        }
+    }
+
     static class Create {
         private JFrame frame;
         private DefaultTableModel tableModel;
-        private final Vector<String> columnNames = new Vector<>(List.of("Name"));
+        public static final Vector<String> columnNames = new Vector<>(List.of("Name"));
 
         public Create() {
             GUI();
@@ -61,7 +77,7 @@ class DataManage {
             }
 
             try (Connection connection = DB.getConnection()) {
-                StringBuilder sql = buildSql(columnCount);
+                StringBuilder sql = DB.getInsertSql(columnCount);
 
                 try {
                     assert connection != null;
@@ -103,36 +119,17 @@ class DataManage {
                 JOptionPane.showMessageDialog(frame, "Ошибка создания соединения: " + e.getMessage(), "Ошибка", JOptionPane.ERROR_MESSAGE);
             }
         }
-
-        public StringBuilder buildSql(int columnCount) {
-            StringBuilder sql = new StringBuilder("INSERT INTO client (");
-            for (int i = 0; i < columnCount; i++) {
-                sql.append(columnNames.get(i));
-                if (i < columnCount - 1) {
-                    sql.append(", ");
-                }
-            }
-            sql.append(") VALUES (");
-
-            for (int i = 0; i < columnCount; i++) {
-                sql.append("?");
-                if (i < columnCount - 1) {
-                    sql.append(", ");
-                }
-            }
-            sql.append(")");
-            return sql;
-        }
     }
 
     static class Read {
         private JFrame frame;
         private DefaultTableModel tableModel;
         private final Map<Integer, Map<Integer, Object>> changedCells = new HashMap<>();
-        private final Vector<String> columnNames = new Vector<>(Arrays.asList("ID", "Name"));
+        public static final Vector<String> columnNames = new Vector<>(Arrays.asList("ID", "Name"));
 
         public Read() {
             GUI();
+            showData(frame, tableModel);
         }
 
         private void GUI() {
@@ -169,7 +166,7 @@ class DataManage {
             panel.add(editButton, BorderLayout.WEST);
 
             JButton refreshButton = new JButton("Обновить");
-            refreshButton.addActionListener(e -> showData());
+            refreshButton.addActionListener(e -> showData(frame, tableModel));
             panel.add(refreshButton, BorderLayout.SOUTH);
 
             JButton cancelButton = new JButton("Отмена");
@@ -180,40 +177,6 @@ class DataManage {
             panel.add(cancelButton, BorderLayout.EAST);
 
             frame.setVisible(true);
-        }
-
-        public void showData() {
-            List<Object[]> data = getData();
-
-            if (data.isEmpty()) {
-                JOptionPane.showMessageDialog(frame, "Таблица пуста!", "Инфо", JOptionPane.INFORMATION_MESSAGE);
-                return;
-            }
-            tableModel.setRowCount(0);
-
-            for (Object[] row : data) {
-                tableModel.addRow(row);
-            }
-        }
-
-        public List<Object[]> getData() {
-            List<Object[]> rows = new ArrayList<>();
-
-            try (Connection connection = DB.getConnection()) {
-                assert connection != null;
-                try (Statement statement = connection.createStatement();
-                     ResultSet set = statement.executeQuery("SELECT * FROM client")) {
-
-                    while (set.next()) {
-                        Object[] row = {set.getInt("ID"), set.getString("Name")};
-                        rows.add(row);
-                    }
-                }
-            }
-            catch (SQLException e) {
-                JOptionPane.showMessageDialog(frame, "Ошибка создания соединения: " + e.getMessage(), "Ошибка", JOptionPane.ERROR_MESSAGE);
-            }
-            return rows;
         }
 
         public void updateData() {
@@ -229,7 +192,7 @@ class DataManage {
                 for (Map.Entry<Integer, Map<Integer, Object>> entry : changedCells.entrySet()) {
                     int row = entry.getKey();
                     Map<Integer, Object> rowChanges = entry.getValue();
-                    StringBuilder sql = buildSql();
+                    StringBuilder sql = DB.getUpdateSql();
 
                     try (PreparedStatement statement = connection.prepareStatement(sql.toString())) {
                         int paramIndex = 1;
@@ -266,23 +229,6 @@ class DataManage {
                 JOptionPane.showMessageDialog(frame, "Ошибка создания соединения", "Ошибка", JOptionPane.ERROR_MESSAGE);
             }
         }
-
-        private StringBuilder buildSql() {
-            StringBuilder sql = new StringBuilder("UPDATE client SET ");
-            boolean firstUpdate = true;
-
-            for (int i = 0; i < columnNames.size(); i++) {
-                if (i > 0) {
-                    if (!firstUpdate) {
-                        sql.append(", ");
-                    }
-                    sql.append(columnNames.get(i)).append(" = ?");
-                    firstUpdate = false;
-                }
-            }
-            sql.append(" WHERE id = ?");
-            return sql;
-        }
     }
 
     static class Delete {
@@ -294,6 +240,7 @@ class DataManage {
 
         public Delete() {
             GUI();
+            DataManage.showData(frame, tableModel);
         }
 
         private void GUI() {
@@ -326,8 +273,6 @@ class DataManage {
                 new App();
             });
             panel.add(cancelButton, BorderLayout.EAST);
-
-            showData();
 
             frame.setVisible(true);
         }
@@ -390,44 +335,6 @@ class DataManage {
             catch (SQLException e) {
                 JOptionPane.showMessageDialog(frame, "Ошибка создания соединения: " + e.getMessage(), "Ошибка", JOptionPane.ERROR_MESSAGE);
             }
-        }
-
-        public void showData() {
-            List<Object[]> data = getData();
-
-            if (data.isEmpty()) {
-                JOptionPane.showMessageDialog(frame, "Таблица пуста!", "Инфо", JOptionPane.INFORMATION_MESSAGE);
-                return;
-            }
-
-            tableModel.setRowCount(0);
-
-            for (Object[] row : data) {
-                tableModel.addRow(row);
-            }
-
-            panel.revalidate();
-            panel.repaint();
-        }
-
-        public List<Object[]> getData() {
-            List<Object[]> rows = new ArrayList<>();
-
-            try (Connection connection = DB.getConnection()) {
-                assert connection != null;
-                try (Statement statement = connection.createStatement();
-                     ResultSet set = statement.executeQuery("SELECT * FROM client")) {
-
-                    while (set.next()) {
-                        Object[] row = {set.getInt("ID"), set.getString("Name")};
-                        rows.add(row);
-                    }
-                }
-            }
-            catch (SQLException e) {
-                JOptionPane.showMessageDialog(frame, "Ошибка получения данных: " + e.getMessage(), "Ошибка", JOptionPane.ERROR_MESSAGE);
-            }
-            return rows;
         }
     }
 }
