@@ -7,10 +7,11 @@ import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.Date;
 import java.util.List;
+import static javax.swing.SortOrder.*;
 
 class DataManage {
 
-    public static void showData(JFrame frame, DefaultTableModel tableModel) {
+    public static void showData(JFrame frame, DefaultTableModel tableModel, SortOrder sortOrder) {
         List<Object[]> data = DB.getData();
 
         if (data.isEmpty()) {
@@ -18,11 +19,32 @@ class DataManage {
             return;
         }
 
+        List<Object[]> sortedData = sortData(data, sortOrder);
         tableModel.setRowCount(0);
 
-        for (Object[] row : data) {
+        for (Object[] row : sortedData) {
             tableModel.addRow(row);
         }
+    }
+
+    public static List<Object[]> sortData(List<Object[]> data, SortOrder sortOrder) {
+        if (data.isEmpty()) {
+            return data;
+        }
+
+        List<Object[]> sortedData = new ArrayList<>(data);
+        switch (sortOrder) {
+            case ASCENDING:
+                sortedData.sort(Comparator.comparing(row -> row[1].toString()));
+                break;
+            case DESCENDING:
+                sortedData.sort(Comparator.comparing(row -> row[1].toString(), Comparator.reverseOrder()));
+                break;
+            case UNSORTED:
+            default:
+                break;
+        }
+        return sortedData;
     }
 
     static class Create {
@@ -132,10 +154,11 @@ class DataManage {
         private DefaultTableModel tableModel;
         private final Map<Integer, Map<Integer, Object>> changedCells = new HashMap<>();
         public static final Vector<String> columnNames = new Vector<>(Arrays.asList("ID", "Name", "CreatedAt", "UpdatedAt"));
+        private SortOrder currentOrder = UNSORTED;
 
         public Read() {
             GUI();
-            showData(frame, tableModel);
+            showData(frame, tableModel, UNSORTED);
         }
 
         private void GUI() {
@@ -147,7 +170,42 @@ class DataManage {
             JPanel panel = new JPanel(new BorderLayout());
             frame.add(panel, BorderLayout.CENTER);
 
-            tableModel = new DefaultTableModel(columnNames, 0);
+            JPanel sortPanel = new JPanel();
+            sortPanel.setLayout(new FlowLayout(FlowLayout.LEFT));
+
+            JRadioButton ascendingButton = new JRadioButton("По возрастанию");
+            ascendingButton.addActionListener(e -> {
+                currentOrder = ASCENDING;
+                showData(frame, tableModel, currentOrder);
+            });
+
+            JRadioButton descendingButton = new JRadioButton("По убыванию");
+            descendingButton.addActionListener(e -> {
+                currentOrder = DESCENDING;
+                showData(frame, tableModel, currentOrder);
+            });
+            JRadioButton noSort = new JRadioButton("Без сортировки", true);
+            noSort.addActionListener(e -> {
+                currentOrder = UNSORTED;
+                showData(frame, tableModel, currentOrder);
+            });
+
+            ButtonGroup sortGroup = new ButtonGroup();
+            sortGroup.add(ascendingButton);
+            sortGroup.add(descendingButton);
+            sortGroup.add(noSort);
+
+            sortPanel.add(ascendingButton);
+            sortPanel.add(descendingButton);
+            sortPanel.add(noSort);
+
+            panel.add(sortPanel, BorderLayout.NORTH);
+            tableModel = new DefaultTableModel(columnNames, 0) {
+                @Override
+                public boolean isCellEditable(int row, int column) {
+                    return column > 0 && column < columnNames.size() - 2;
+                }
+            };
             tableModel.addTableModelListener(listener -> {
                 if (listener.getType() == TableModelEvent.UPDATE) {
                     int row = listener.getFirstRow();
@@ -172,7 +230,7 @@ class DataManage {
             panel.add(editButton, BorderLayout.WEST);
 
             JButton refreshButton = new JButton("Обновить");
-            refreshButton.addActionListener(e -> showData(frame, tableModel));
+            refreshButton.addActionListener(e -> showData(frame, tableModel, currentOrder));
             panel.add(refreshButton, BorderLayout.SOUTH);
 
             JButton cancelButton = new JButton("Отмена");
@@ -261,10 +319,11 @@ class DataManage {
         private JTable table;
         private DefaultTableModel tableModel;
         private final Vector<String> columnNames = new Vector<>(Arrays.asList("ID", "Name", "CreatedAt", "UpdatedAt"));
+        private SortOrder currentOrder = UNSORTED;
 
         public Delete() {
             GUI();
-            DataManage.showData(frame, tableModel);
+            DataManage.showData(frame, tableModel, UNSORTED);
         }
 
         private void GUI() {
@@ -276,7 +335,43 @@ class DataManage {
             JPanel panel = new JPanel(new BorderLayout());
             frame.add(panel, BorderLayout.CENTER);
 
-            tableModel = new DefaultTableModel(columnNames, 0);
+            JPanel sortPanel = new JPanel();
+            sortPanel.setLayout(new FlowLayout(FlowLayout.LEFT));
+
+            JRadioButton ascendingButton = new JRadioButton("По возрастанию");
+            ascendingButton.addActionListener(e -> {
+                currentOrder = ASCENDING;
+                showData(frame, tableModel, currentOrder);
+            });
+
+            JRadioButton descendingButton = new JRadioButton("По убыванию");
+            descendingButton.addActionListener(e -> {
+                currentOrder = DESCENDING;
+                showData(frame, tableModel, currentOrder);
+            });
+            JRadioButton noSort = new JRadioButton("Без сортировки", true);
+            noSort.addActionListener(e -> {
+                currentOrder = UNSORTED;
+                showData(frame, tableModel, currentOrder);
+            });
+
+            ButtonGroup sortGroup = new ButtonGroup();
+            sortGroup.add(ascendingButton);
+            sortGroup.add(descendingButton);
+            sortGroup.add(noSort);
+
+            sortPanel.add(ascendingButton);
+            sortPanel.add(descendingButton);
+            sortPanel.add(noSort);
+
+            panel.add(sortPanel, BorderLayout.NORTH);
+
+            tableModel = new DefaultTableModel(columnNames, 0) {
+                @Override
+                public boolean isCellEditable(int row, int column) {
+                    return column > 0 && column < columnNames.size() - 2;
+                }
+            };
             table = new JTable(tableModel);
             JScrollPane scrollPane = new JScrollPane(table);
             panel.add(scrollPane, BorderLayout.CENTER);
