@@ -3,7 +3,9 @@ import javax.swing.event.TableModelEvent;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
 import java.sql.*;
+import java.text.SimpleDateFormat;
 import java.util.*;
+import java.util.Date;
 import java.util.List;
 
 class DataManage {
@@ -78,13 +80,14 @@ class DataManage {
 
             try (Connection connection = DB.getConnection()) {
                 StringBuilder sql = DB.getInsertSql();
-
                 try {
                     assert connection != null;
                     try (PreparedStatement statement = connection.prepareStatement(sql.toString())) {
                         connection.setAutoCommit(false);
+                        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 
                         for (int i = 0; i < rowCount; i++) {
+                            int paramIndex = 1;
                             for (int j = 0; j < columnCount; j++) {
                                 Object value = tableModel.getValueAt(i, j);
                                 String strValue = (value == null) ? "" : value.toString().trim();
@@ -92,11 +95,14 @@ class DataManage {
                                 if (strValue.isEmpty()) {
                                     JOptionPane.showMessageDialog(frame, "Обнаружена пустая строка!\n" +
                                             "Убедитесь, что Вы нажали Enter после ввода данных в ячейку!", "Предупреждение", JOptionPane.WARNING_MESSAGE);
-                                    connection.rollback();
                                     return;
                                 }
-                                statement.setString(j + 1, strValue);
+                                else {
+                                    statement.setObject(paramIndex++, value);
+                                }
                             }
+                            String formattedDate = sdf.format(new Date());
+                            statement.setString(paramIndex, formattedDate);
                             statement.addBatch();
                         }
 
@@ -188,7 +194,7 @@ class DataManage {
             try (Connection connection = DB.getConnection()) {
                 assert connection != null;
                 connection.setAutoCommit(false);
-
+                SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
                 for (Map.Entry<Integer, Map<Integer, Object>> entry : changedCells.entrySet()) {
                     int row = entry.getKey();
                     Map<Integer, Object> rowChanges = entry.getValue();
@@ -196,10 +202,7 @@ class DataManage {
 
                     try (PreparedStatement statement = connection.prepareStatement(sql.toString())) {
                         int paramIndex = 1;
-                        for (int i = 1; i < columnNames.size(); i++) {
-                            if (columnNames.get(i).equals("UpdatedAt")) {
-                                continue;
-                            }
+                        for (int i = 0; i < columnNames.size(); i++) {
                             Object value;
                             if (rowChanges.containsKey(i)) {
                                 value = rowChanges.get(i);
@@ -207,16 +210,17 @@ class DataManage {
                             else {
                                 value = tableModel.getValueAt(row, i);
                             }
-                            if (columnNames.get(i).equals("CreatedAt")) {
+                            if (columnNames.get(i).equals("UpdatedAt")) {
+                                String formattedDate = sdf.format(new Date());
+                                statement.setString(paramIndex++, formattedDate);
+                            }
+                            else {
                                 if (value != null) {
-                                    statement.setString(paramIndex++, value.toString());
+                                    statement.setObject(paramIndex++, value);
                                 }
                                 else {
                                     statement.setNull(paramIndex++, java.sql.Types.VARCHAR);
                                 }
-                            }
-                            else {
-                                statement.setObject(paramIndex++, value);
                             }
                         }
                         try {

@@ -26,7 +26,7 @@ public class DB {
                  ResultSet set = statement.executeQuery("SELECT * FROM client")) {
 
                 while (set.next()) {
-                    Object[] row = {set.getInt("ID"), set.getString("Name"), set.getString("CreatedAt"), set.getString("UpdatedAt")};
+                    Object[] row = {set.getInt("ID"), set.getString("Name"), set.getTimestamp("CreatedAt"), set.getTimestamp("UpdatedAt")};
                     rows.add(row);
                 }
             }
@@ -55,28 +55,20 @@ public class DB {
                 sql.append(", ");
             }
         }
-        sql.append(", datetime('now'))");
+        sql.append(", ?)");
         return sql;
     }
 
     public static StringBuilder getUpdateSql() {
         Vector<String> columnNames = DataManage.Read.columnNames;
         StringBuilder sql = new StringBuilder("UPDATE client SET ");
-        int updateAtIndex = columnNames.indexOf("UpdatedAt");
         boolean firstUpdate = true;
 
-        for (int i = 0; i < columnNames.size(); i++) {
+        for (String columnName: columnNames) {
             if (!firstUpdate) {
                 sql.append(", ");
             }
-            sql.append(columnNames.get(i)).append(" = ");
-
-            if (i == updateAtIndex) {
-                sql.append("datetime('now')");
-            }
-            else {
-                sql.append("?");
-            }
+            sql.append(columnName).append(" = ?");
             firstUpdate = false;
         }
         sql.append(" WHERE id = ?");
