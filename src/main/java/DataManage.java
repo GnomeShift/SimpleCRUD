@@ -77,7 +77,7 @@ class DataManage {
             });
             panel.add(addRowButton, BorderLayout.NORTH);
 
-            JButton submitButton = new JButton("Отправить данные");
+            JButton submitButton = new JButton("Отправить");
             submitButton.addActionListener(e -> addData());
             panel.add(submitButton, BorderLayout.SOUTH);
 
@@ -114,17 +114,17 @@ class DataManage {
                                 Object value = tableModel.getValueAt(i, j);
                                 String strValue = (value == null) ? "" : value.toString().trim();
 
-                                if (strValue.isEmpty()) {
+                                if (value == null || strValue.isEmpty()) {
+                                    statement.setNull(paramIndex++, Types.NULL);
                                     JOptionPane.showMessageDialog(frame, "Обнаружена пустая строка!\n" +
                                             "Убедитесь, что Вы нажали Enter после ввода данных в ячейку!", "Предупреждение", JOptionPane.WARNING_MESSAGE);
-                                    return;
                                 }
                                 else {
                                     statement.setObject(paramIndex++, value);
                                 }
                             }
                             String formattedDate = sdf.format(new Date());
-                            statement.setString(paramIndex, formattedDate);
+                            statement.setTimestamp(paramIndex, Timestamp.valueOf(formattedDate));
                             statement.addBatch();
                         }
 
@@ -219,7 +219,7 @@ class DataManage {
             JScrollPane scrollPane = new JScrollPane(table);
             panel.add(scrollPane, BorderLayout.CENTER);
 
-            JButton editButton = new JButton("Редактировать данные");
+            JButton editButton = new JButton("Редактировать");
             editButton.addActionListener(e -> {
                 Object[] options = {"Да", "Нет"};
                 int confirm = JOptionPane.showOptionDialog(frame, "Отредактировать измененные данные?", "Подтверждение", JOptionPane.DEFAULT_OPTION, JOptionPane.QUESTION_MESSAGE, null, options, options[1]);
@@ -270,7 +270,7 @@ class DataManage {
                             }
                             if (columnNames.get(i).equals("UpdatedAt")) {
                                 String formattedDate = sdf.format(new Date());
-                                statement.setString(paramIndex++, formattedDate);
+                                statement.setTimestamp(paramIndex++, Timestamp.valueOf(formattedDate));
                             }
                             else {
                                 if (value != null) {
@@ -327,7 +327,7 @@ class DataManage {
         }
 
         private void GUI() {
-            frame = new JFrame("Удалить данные");
+            frame = new JFrame("Удалить");
             frame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
             frame.setSize(400, 300);
             frame.setLayout(new BorderLayout());
@@ -376,7 +376,7 @@ class DataManage {
             JScrollPane scrollPane = new JScrollPane(table);
             panel.add(scrollPane, BorderLayout.CENTER);
 
-            JButton submitButton = new JButton("Удалить данные");
+            JButton submitButton = new JButton("Удалить");
             submitButton.addActionListener(e -> {
                 Object[] options = {"Да", "Нет"};
                 int confirm = JOptionPane.showOptionDialog(frame, "Удалить выбранные строки?", "Подтверждение", JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE, null, options, options[1]);
