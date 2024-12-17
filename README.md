@@ -42,4 +42,6 @@ java -jar SimpleCRUD-1.0-SNAPSHOT.jar
 
 ## ⚙️Конфигурация
 1. Создайте файл БД SQLite с названием ```database```  в папке с приложением.
-2. Запустите демо-скрипт создания структуры БД.
+2. Запустите скрипт создания структуры БД.
+   * Для Windows: ```create_structure_win.cmd```
+   * Для Linux/MacOS: ```create_structure_bash.sh```
