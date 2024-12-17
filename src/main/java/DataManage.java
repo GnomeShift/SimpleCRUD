@@ -28,17 +28,17 @@ class DataManage {
     }
 
     public static List<Object[]> sortData(List<Object[]> data, SortOrder sortOrder) {
-        if (data.isEmpty()) {
+        if (data == null || data.isEmpty()) {
             return data;
         }
 
         List<Object[]> sortedData = new ArrayList<>(data);
         switch (sortOrder) {
             case ASCENDING:
-                sortedData.sort(Comparator.comparing(row -> row[1].toString()));
+                sortedData.sort(Comparator.comparing(row -> row[0].toString()));
                 break;
             case DESCENDING:
-                sortedData.sort(Comparator.comparing(row -> row[1].toString(), Comparator.reverseOrder()));
+                sortedData.sort(Comparator.comparing(row -> row[0].toString(), Comparator.reverseOrder()));
                 break;
             case UNSORTED:
             default:
