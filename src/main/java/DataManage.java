@@ -48,8 +48,8 @@ class DataManage {
     }
 
     static class Create {
-        private JFrame frame;
-        private DefaultTableModel tableModel;
+        JFrame frame;
+        DefaultTableModel tableModel;
         public static final Vector<String> columnNames = new Vector<>(List.of("Name"));
 
         public Create() {
